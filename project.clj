@@ -8,7 +8,7 @@
                  [ring/ring-jetty-adapter "1.3.2"]
                  [environ "0.5.0"]
                  [com.novemberain/monger "2.0.0"]
-                 [com.taoensso/carmine "2.7.0"]]
+                 [com.taoensso/carmine "2.7.0" :exclusions [org.clojure/clojure]]]
   :main domain-redirector.core
   :min-lein-version "2.0.0"
   :plugins [[environ/environ.lein "0.2.1"]]
