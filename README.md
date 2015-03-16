@@ -16,8 +16,13 @@ Usually a browser will follow redirects automatically and many proxies will do l
 
 ## What redirections are supported?
 
+```
 foo.com/ -> bar.com/
+```
+
+```
 foo.com/google -> www.google.com
+```
 
 See the examples section to see how to make this work
 
