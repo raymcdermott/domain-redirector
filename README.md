@@ -16,17 +16,10 @@ Usually a browser will follow redirects automatically and many proxies will do l
 
 ## What redirections are supported?
 
-##### Domain-A -> Domain-B
-
 foo.com/ -> bar.com/
+foo.com/google -> www.google.com
 
-TBD... paste in example curl output
-
-##### Domain-A -> Domain-B/new/path
-
-foo.com -> bar.com/place/index.html
-
-TBD... paste in example curl output
+See the examples section to see how to make this work
 
 ## Networking pre-requisites
 
@@ -94,44 +87,73 @@ You can tweak the application behaviour with a small number of options
 
 ## Examples
 
-###### Example 1: Path redirection (new domain)
+###### Example 1: Domain redirection
 
 ```JavaScript
 {
-  "source": {
-    "domain": [ "foo.com" ],
-  },
-  "target": {
-    "domain": "www.google.com"
-  }
+    "source" : {
+        "domain" : [ "localhost" ]
+    },
+    "target" : {
+        "domain" : "www.google.com"
+    }
+}
+```
+```
+$ curl -I http://localhost:5000/google
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 16 Mar 2015 15:56:17 GMT
+Location: http://www.google.com/
+Content-Length: 0
+Server: Jetty(7.6.13.v20130916)
+```
+
+###### Example 2: Domain redirection from domain/path to new domain with https
+
+```JavaScript
+{
+    "source" : {
+        "domain" : [ "localhost" ],
+        "path" : "/google"
+    },
+    "target" : {
+        "scheme" : "https",
+        "domain" : "www.google.com"
+    }
 }
 ```
 
-###### Example 2: Domain redirection (supports multiple source domains)
-
-```JavaScript
-{
-  "source": {
-    "domain": [ "foo.com", "baz.com" ]
-  },
-  "target": {
-    "domain": "bar.com"
-  }
-}
+```
+$ curl -I http://localhost:5000/google
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 16 Mar 2015 15:56:17 GMT
+Location: https://www.google.com/
+Content-Length: 0
+Server: Jetty(7.6.13.v20130916)
 ```
 
 ###### Example 3: Domain + path redirection (also with multiple source domains)
 
 ```JavaScript
 {
-  "source": {
-    "domain": [ "foo.com", "baz.com" ]
-  },
-  "target": {
-    "domain": "bar.com",
-    "path": "/new/path"
-  }
+    "source" : {
+        "domain" : [ "localhost" ],
+        "path" : "/prius"
+    },
+    "target" : {
+        "domain" : "www.toyota-europe.com",
+        "path" : "/new-cars/prius"
+    }
 }
+```
+
+```
+$ curl -I http://localhost:5000/prius
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 16 Mar 2015 15:55:13 GMT
+Location: http://www.toyota-europe.com/new-cars/prius
+Content-Length: 0
+Server: Jetty(7.6.13.v20130916)
 ```
 
 ## Testing
