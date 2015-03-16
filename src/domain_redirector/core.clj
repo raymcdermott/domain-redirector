@@ -10,9 +10,9 @@
 (def default-unspecified-port -1)
 
 ; using defrecord because: free constructor and documentation
-(defrecord url-record [scheme domain port path query])
+(defrecord url-record [scheme domain port path query url-key])
 
-; functions to split and re-compose URLs
+; functions to split and reform URLs
 (defn url-string-to-record [url-string]
   (let [url-object (URL. url-string)
         domain (.getHost url-object)
@@ -20,7 +20,7 @@
         query (.getQuery url-object)
         scheme (.getProtocol url-object)
         port (.getPort url-object)]
-    (->url-record scheme domain port path query)))
+    (->url-record scheme domain port path query (str domain path))))
 
 (defn url-string-from-record [url-record]
   (let [port (if (= default-unspecified-port (:port url-record)) "" (str ":" (:port url-record)))
@@ -31,12 +31,20 @@
                      (and (:query url-record) (str "?" (:query url-record))))]
     url-str))
 
+; TODO -- think ... do we need to evaluate for longest matching path?
+
+(defn get-domain-map-from-mongo
+  [url-record]
+  (if-let [path (or (= "" (:path url-record)) (= "/" (:path url-record)))]
+    (mongo/get-domain-map (:domain url-record))
+    (mongo/get-domain-map (:domain url-record) (:path url-record))))
+
 (defn get-domain [url-record]
   "Obtains the domain from Redis or Mongo. Caches results from Mongo in Redis"
-  (if-let [redis-val (redis/get-domain-map-from-redis (:domain url-record))]
+  (if-let [redis-val (redis/get-domain-map-from-redis (:url-key url-record))]
     redis-val
-    (if-let [domain-map (mongo/get-domain-map-from-mongo (:domain url-record))]
-      (redis/set-domain-map-in-redis! (:domain url-record) domain-map))))
+    (if-let [domain-map (get-domain-map-from-mongo url-record)]
+      (redis/set-domain-map-in-redis! (:url-key url-record) domain-map))))
 
 (defn make-response-url [from-url-record mappings]
   "Produces a URL based on inputs and the target domain map"
@@ -44,7 +52,8 @@
                              (:domain mappings)
                              (or (:port mappings) default-unspecified-port)
                              (or (:path mappings) "/")
-                             (or (:query from-url-record) nil))]
+                             (or (:query from-url-record) nil)
+                             (str (:domain mappings) (:path mappings)))]
     (url-string-from-record record)))
 
 (defn make-301-response [url-record target-map]
