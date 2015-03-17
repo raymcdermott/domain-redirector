@@ -69,7 +69,8 @@
       (response/not-found "Could not find forwarding domain"))))
 
 (defn handler [request]
-  (generate-response (request/request-url request)))
+  (println (str "Processing request for " (request/request-url request)))
+  (time (generate-response (request/request-url request))))
 
 ; -------*** START WEB SERVER
 ;

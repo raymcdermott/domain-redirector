@@ -185,7 +185,15 @@ Not yet. Let me know if you need it and the use case.
 
 ### Is it possible to use this application as a reverse proxy?
 
-No. That's another use case. 
+No. That's another use case.
+
+### TODO List
+
+- Memoise the results from REDIS
+- Support checking of forwarded links (core.async)
+- Support powerful regular expression style logic for route matching (core.match / core.logic)
+
+
 
 ## License
 
