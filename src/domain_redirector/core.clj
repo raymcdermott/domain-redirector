@@ -68,8 +68,12 @@
       (make-301-response url-record (:target mappings))
       (response/not-found "Could not find forwarding domain"))))
 
+(defn print-headers [headers]
+  (clojure.pprint/pprint headers))
+
 (defn handler [request]
   (println (str "Processing request for " (request/request-url request)))
+  (print-headers (:headers request))
   (time (generate-response (request/request-url request))))
 
 ; -------*** START WEB SERVER
