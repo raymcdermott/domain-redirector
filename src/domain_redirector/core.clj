@@ -9,16 +9,21 @@
 
 (def default-unspecified-port -1)
 
+(def forwarded-protocol-header (or (env :protocol-header-name) "x-forwarded-proto")) ; default is the header provided by Heroku
+
 ; using defrecord because: free constructor and documentation
 (defrecord url-record [scheme domain port path query url-key])
 
-; functions to split and reform URLs
-(defn url-string-to-record [url-string]
-  (let [url-object (URL. url-string)
+; functions to marshall URLs as data
+(defn request-to-url-record [request]
+  (let [url-string (request/request-url request)
+        url-object (URL. url-string)
         domain (.getHost url-object)
         path (.getPath url-object)
         query (.getQuery url-object)
-        scheme (.getProtocol url-object)
+        headers (:headers request)
+        x-protocol-header (headers forwarded-protocol-header)
+        scheme (or x-protocol-header (.getProtocol url-object))
         port (.getPort url-object)]
     (->url-record scheme domain port path query (str domain path))))
 
@@ -62,8 +67,8 @@
         response-301 (response/status (response/response "") 301)]
     (response/header response-301 "Location" url)))
 
-(defn generate-response [url]
-  (let [url-record (url-string-to-record url)]
+(defn generate-response [request]
+  (let [url-record (request-to-url-record url)]
     (if-let [mappings (get-domain url-record)]
       (make-301-response url-record (:target mappings))
       (response/not-found "Could not find forwarding domain"))))
@@ -74,7 +79,7 @@
 (defn handler [request]
   (println (str "Processing request for " (request/request-url request)))
   (print-headers (:headers request))
-  (time (generate-response (request/request-url request))))
+  (time (generate-response request)))
 
 ; -------*** START WEB SERVER
 ;
