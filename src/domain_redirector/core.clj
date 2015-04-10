@@ -3,16 +3,26 @@
   (:require [ring.util.request :as request]
             [ring.util.response :as response]
             [ring.adapter.jetty :as jetty]
+            [cheshire.core :refer :all]
+            [clojure.java.io :as io]
+            [clojure.core.memoize :as memo]
             [domain-redirector.redis-helper :as redis]
             [domain-redirector.mongo-helper :as mongo]
             [environ.core :refer [env]]))
 
 (def default-unspecified-port -1)
 
+(def storage-config
+  (if (env :prefer-network-backing-store)
+    {:backing-store :network}
+    {:backing-store :memory}))
+
+; Network infrastructure often terminates SSL before hitting the server so we need to
+; know what the real protocol is (ie what is the protocol requested by the user)
 (def forwarded-protocol-header (or (env :protocol-header-name) "x-forwarded-proto")) ; default is the header provided by Heroku
 
 ; using defrecord because: free constructor and documentation
-(defrecord url-record [scheme domain port path query url-key])
+(defrecord url-record [scheme domain port path query])
 
 ; functions to marshall URLs as data
 (defn request-to-url-record [request]
@@ -22,10 +32,10 @@
         path (.getPath url-object)
         query (.getQuery url-object)
         headers (:headers request)
-        x-protocol-header (headers forwarded-protocol-header)
+        x-protocol-header (and headers (headers forwarded-protocol-header))
         scheme (or x-protocol-header (.getProtocol url-object))
         port (.getPort url-object)]
-    (->url-record scheme domain port path query (str domain path))))
+    (->url-record scheme domain port path query)))
 
 (defn url-string-from-record [url-record]
   (let [port (if (= default-unspecified-port (:port url-record)) "" (str ":" (:port url-record)))
@@ -36,20 +46,51 @@
                      (and (:query url-record) (str "?" (:query url-record))))]
     url-str))
 
-; TODO -- think ... do we need to evaluate for longest matching path?
-
+; TODO -- think ... do we need to evaluate for longest matching path? If so, how...
 (defn get-domain-map-from-mongo
   [url-record]
   (if-let [path (or (= "" (:path url-record)) (= "/" (:path url-record)))]
     (mongo/get-domain-map (:domain url-record))
     (mongo/get-domain-map (:domain url-record) (:path url-record))))
 
-(defn get-domain [url-record]
+(defn get-domain-from-network [url-record]
   "Obtains the domain from Redis or Mongo. Caches results from Mongo in Redis"
-  (if-let [redis-val (redis/get-domain-map-from-redis (:url-key url-record))]
-    redis-val
-    (if-let [domain-map (get-domain-map-from-mongo url-record)]
-      (redis/set-domain-map-in-redis! (:url-key url-record) domain-map))))
+  (let [redis-key (str (:domain url-record) (:path url-record))]
+    (if-let [redis-val (redis/get-domain-map-from-redis redis-key)]
+      redis-val
+      (if-let [domain-map (get-domain-map-from-mongo url-record)]
+        (redis/set-domain-map-in-redis! redis-key domain-map)))))
+
+(defn load-json-file [filename]
+  (and (.exists (io/file filename))
+       (first (parsed-seq (clojure.java.io/reader filename) true))))
+
+(def domains (atom {}))
+
+(defn set-domains-in-memory!
+  ([] (let [filename (or (env :domain-json-file) "domains.json")]
+        (set-domains-in-memory! filename)))
+  ([filename] (let [new-domains (load-json-file filename)]
+                (and new-domains (reset! domains new-domains)))))
+
+(defn- matching-domain [domain-name domain-name-list]
+  (some #(= % domain-name) domain-name-list))
+
+(defn get-domain-from-memory [url-record]
+  (let [result (filter #(matching-domain
+                         (:domain url-record) (get-in % [:source :domain])) @domains)
+        path-results (and (:path url-record)
+                          (filter #(= (:path url-record) (get-in % [:source :path])) result))]
+    (or (first path-results) (first result))))
+
+(defn get-domain-from-backing-store [url-record]
+  (if (= (:backing-store storage-config) :network)
+    (get-domain-from-network url-record)
+    (get-domain-from-memory url-record)))
+
+(def get-domain
+  "Memoize fetching the domain from a network store"
+  (memo/ttl get-domain-from-backing-store :ttl/threshold (or (env :memoize-ttl) 60000)))
 
 (defn make-response-url [from-url-record mappings]
   "Produces a URL based on inputs and the target domain map"
@@ -57,8 +98,7 @@
                              (:domain mappings)
                              (or (:port mappings) default-unspecified-port)
                              (or (:path mappings) "/")
-                             (or (:query from-url-record) nil)
-                             (str (:domain mappings) (:path mappings)))]
+                             (or (:query from-url-record) nil))]
     (url-string-from-record record)))
 
 (defn make-301-response [url-record target-map]
@@ -68,24 +108,22 @@
     (response/header response-301 "Location" url)))
 
 (defn generate-response [request]
-  (let [url-record (request-to-url-record url)]
+  (let [url-record (request-to-url-record request)]
     (if-let [mappings (get-domain url-record)]
       (make-301-response url-record (:target mappings))
       (response/not-found "Could not find forwarding domain"))))
 
-(defn print-headers [headers]
-  (clojure.pprint/pprint headers))
-
 (defn handler [request]
   (println (str "Processing request for " (request/request-url request)))
-  (print-headers (:headers request))
   (time (generate-response request)))
 
 ; -------*** START WEB SERVER
 ;
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))]
+    (if (= (:backing-store storage-config) :memory)
+      (set-domains-in-memory!))
+
     (jetty/run-jetty handler {:port port :join? false})))
 
-;(.stop server)
-;(def server (-main))
+(defn test-server [port] (-main port))

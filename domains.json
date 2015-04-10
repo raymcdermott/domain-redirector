@@ -1,0 +1,20 @@
+[
+  {
+    "source": {
+      "domain": ["localhost"],
+      "path" : "/bing"
+    },
+    "target": {
+      "domain": "www.bing.com"
+    }
+  },
+  {
+    "source": {
+      "domain": ["localhost"],
+      "path" : "/google"
+    },
+    "target": {
+      "domain": "www.google.com"
+    }
+  }
+]

@@ -10,7 +10,8 @@
 
 (defn set-domain-map-in-redis! [k v]
   "Stores value v against a key k in Redis. Returns value v"
-  (and k v (redis/wcar (get-redis-connection-pool) (redis/set k v))
+  (and k v (redis/wcar (get-redis-connection-pool)
+                       (redis/setex k (or (env :redis-ttl-seconds) 1800) v))
        v))
 
 (defn get-domain-map-from-redis [k]

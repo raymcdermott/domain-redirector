@@ -1,6 +1,8 @@
 # domain-redirector
 
-A Clojure application designed to manage domain redirection using data from a JSON document stored in MongoDB and cached in REDIS.
+A Clojure application designed to manage domain redirection using data from a JSON document.
+
+The JSON document can be loaded from disk or MongoDB.
 
 ### Response: HTTP 301
 
@@ -17,11 +19,15 @@ Usually a browser will follow redirects automatically and many proxies will do l
 ## What redirections are supported?
 
 ```
-foo.com/ -> bar.com/
+foo.com -> bar.com
 ```
 
 ```
 foo.com/google -> www.google.com
+```
+
+```
+http://foo.com/secure -> https://my-secure-site.com
 ```
 
 See the examples section to see how to make this work
@@ -29,7 +35,7 @@ See the examples section to see how to make this work
 ## Networking pre-requisites
 
 Assuming that foo.com is not this domain, the DNS CNAME for foo.com must point to the domain of this app. Depending on where 
-and how you host the app, using DNS A records is possible but more fragile.
+and how you host the app, using DNS A records is possible but more fragile (because you need to use a fixed IP address).
 
 ## Usage
 
@@ -52,13 +58,25 @@ The table lists the supported properties for *target*:
 
 ## Performance
 
-Benchmarks TBD...
+The data for redirects does not usually change frequently which means that caching is an effective way to improve performance.
 
-Optionally a maximum response time limit can be imposed, after which the app will return a HTTP status 500.
+The calls from Mongo are cached in REDIS. The calls from REDIS are *memoized* by default for 1 minute.
+
+This means that the system will generally be quite quick for the first call and very quick on subsequent calls even if calls are spaced out.
+
+It will become quicker under moderate pressure for the same URLs since most of the calls will then operate within the memory of the application.
+
+On a recent laptop (2013 Macbook Pro) I see Mongo in the order of ~10ms, REDIS ~1ms and the in memory or memoised responses ~1 microsecond.
+
+By default the performance is decent and will scale horizontally. There are also plenty of tweaks available on each layer without big changes.
 
 ## Limitations
 
 In the existing design, no attempt is made to validate the transformed URLs for dead links.
+
+## Choice of local or network storage
+
+If PREFER_NETWORK_BACKING_STORE is set to true the service will check for MongoDB (see Dependencies). If not the service expects the data to be loadable from the file system. By default it will choose a file called 'domains.json' in the project folder.
 
 ## Notes for PAAS platforms
 
@@ -70,7 +88,10 @@ This feature is *NOT* provided by this application.
 
 ## Dependencies
 
-You need to install locally or have network services that provide MongoDB and REDIS.
+If you wish to use an external backing store you will need to install locally or have services that provide MongoDB and REDIS.
+
+**You must set the environment variable PREFER_NETWORK_BACKING_STORE. You don't need to set it any particular value, it's mere presence in the environment will trigger checks for the other settings.**
+
 
 The application will attach to these services using the following variables / defaults
  
@@ -81,14 +102,14 @@ The application will attach to these services using the following variables / de
 
 ## Options
 
-You can tweak the application behaviour with a small number of options
+You can further tweak the application behaviour with a small number of options
 
 | Name              | Meaning          | Default Value |
 | ----------------- | -------          | ------------- |
 | PORT              | Port # for exposed HTTP endpoint | 5000 |
-| MONGO_COLLECTION  | Document collection name | domainRedirections |
-| REDIS_TTL_SECONDS | # Seconds REDIS caches values | 0 (forever) |
-| SLA_MILLISECONDS  | # Milliseconds before SLA fails (HTTP 500 response) | none |
+| MONGO_COLLECTION  | Document collection name | redirections |
+| MEMOIZE_TTL_SECONDS | # Seconds Clojure caches values | 60 |
+| REDIS_TTL_SECONDS | # Seconds REDIS caches values | 1800 |
 
 ## Examples
 
@@ -161,6 +182,62 @@ Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
 
+###### Example 3: Domain + path redirection (also with multiple source domains)
+
+```JavaScript
+{
+    "source" : {
+        "domain" : [ "localhost" ],
+        "path" : "/new-site"
+    },
+    "target" : {
+        "domain" : "www.my-new-site.com",
+        "path" : "/new-path"
+    }
+}
+```
+
+```
+$ curl -I http://localhost:5000/prius
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 16 Mar 2015 15:55:13 GMT
+Location: http://www.toyota-europe.com/new-cars/prius
+Content-Length: 0
+Server: Jetty(7.6.13.v20130916)
+```
+
+###### Example 4: Forwarding attributes as headers
+
+```JavaScript
+{
+      "source": {
+            "domain": [ "localhost" ],
+            "path": "/prius",
+            "attributeMap": [
+                {
+                    "query-string": "token",
+                    "header": "Location",
+                    "headerProperty": "Bearer"
+                }
+            ]
+      },
+      "target": {
+            "domain": "www.toyota-europe.com",
+            "path": "/new-cars/prius"
+      }
+}
+```
+
+```
+$ curl -I http://localhost:5000/prius?token=abc-123
+HTTP/1.1 301 Moved Permanently
+Date: Mon, 16 Mar 2015 15:55:13 GMT
+Authorization: Bearer abc-123
+Location: http://www.toyota-europe.com/new-cars/prius
+Content-Length: 0
+Server: Jetty(7.6.13.v20130916)
+```
+
 ## Testing
 
 The application comes with a number of pre-built tests to ensure that the general logic is valid.
@@ -187,12 +264,15 @@ Not yet. Let me know if you need it and the use case.
 
 No. That's another use case.
 
+### Is it possible to use this application as a URL shortener?
+
+No. That's also another use case.
+
 ### TODO List
 
-- Memoise the results from REDIS
+- support forwarding attributes as headers (for example authentication tokens)
 - Support checking of forwarded links (core.async)
 - Support powerful regular expression style logic for route matching (core.match / core.logic)
-
 
 
 ## License

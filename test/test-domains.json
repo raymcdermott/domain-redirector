@@ -1,0 +1,55 @@
+[
+  {
+    "source": {
+      "domain": ["localhost", "other.host.com"]
+    },
+    "target": {
+      "domain": "www.google.com"
+    }
+  },
+  {
+    "source": {
+      "domain": ["this.host.com"]
+    },
+    "target": {
+      "domain": "www.bing.com"
+    }
+  },
+  {
+    "source": {
+      "domain": ["my.host.com"],
+      "path" : "/bing"
+    },
+    "target": {
+      "domain": "www.bing.com"
+    }
+  },
+  {
+    "source": {
+      "domain": ["my.host.com"],
+      "path" : "/google"
+    },
+    "target": {
+      "domain": "www.google.com"
+    }
+  },
+  {
+    "source": {
+      "domain": ["localhost"],
+      "path" : "/secure"
+    },
+    "target": {
+      "domain": "www.google.com",
+      "scheme" : "https"
+    }
+  },
+  {
+    "source": {
+      "domain": ["localhost"],
+      "path" : "/bing"
+    },
+    "target": {
+      "domain": "www.bing.com"
+    }
+  }
+]
