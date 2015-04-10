@@ -46,7 +46,6 @@
                      (and (:query url-record) (str "?" (:query url-record))))]
     url-str))
 
-; TODO -- think ... do we need to evaluate for longest matching path? If so, how...
 (defn get-domain-map-from-mongo
   [url-record]
   (if-let [path (or (= "" (:path url-record)) (= "/" (:path url-record)))]
@@ -76,11 +75,14 @@
 (defn- matching-domain [domain-name domain-name-list]
   (some #(= % domain-name) domain-name-list))
 
+(defn- matching-path [matching-path path]
+  (and matching-path path (.startsWith matching-path path)))
+
 (defn get-domain-from-memory [url-record]
   (let [result (filter #(matching-domain
                          (:domain url-record) (get-in % [:source :domain])) @domains)
         path-results (and (:path url-record)
-                          (filter #(= (:path url-record) (get-in % [:source :path])) result))]
+                          (filter  #(matching-path (:path url-record) (get-in % [:source :path])) result))]
     (or (first path-results) (first result))))
 
 (defn get-domain-from-backing-store [url-record]

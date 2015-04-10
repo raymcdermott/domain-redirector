@@ -158,7 +158,7 @@ Server: Jetty(7.6.13.v20130916)
 ```
 
 ###### Example 3: Domain + path redirection
- 
+
 ```JavaScript
 {
     "source" : {
@@ -255,9 +255,13 @@ I will accept pull requests for the core logic and especially for any new tests.
 
 Yes. Any query parameters are passed along unaltered. Specifically, no attempt is made to decode or encode query parameters.
 
+### Do you non-exact path matching (for example with regexes?)
+
+No, it only supports the simplest path matching where the path URL starts with the path given in the JSON file.
+
 ### Do you support path transformations (for example with regexes?)
 
-Not yet. Let me know if you need it and the use case.
+Not yet. I would like to do this using core.logic rather than regex
 
 ### Is it possible to use this application as a reverse proxy?
 

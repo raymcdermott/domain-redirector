@@ -17,20 +17,20 @@
           (.stop server))))))
 
 (deftest test-get
-   (let [options {:follow-redirects false}
-         response (http/get test-base-url options)]
-     (is (= "http://www.google.com/" (get-in @response [:headers :location])))
-     (is (= 301 (:status @response)))))
+  (let [options {:follow-redirects false}
+        response (http/get test-base-url options)]
+    (is (= "http://www.google.com/" (get-in @response [:headers :location])))
+    (is (= 301 (:status @response)))))
 
 (deftest test-path-get
-   (let [options {:follow-redirects false}
-         response (http/get (str test-base-url "/google") options)]
-     (is (= "http://www.google.com/" (get-in @response [:headers :location])))
-     (is (= 301 (:status @response))))
-   (let [options {:follow-redirects false}
-         response (http/get (str test-base-url "/bing") options)]
-     (is (= "http://www.bing.com/" (get-in @response [:headers :location])))
-     (is (= 301 (:status @response)))))
+  (let [options {:follow-redirects false}
+        response (http/get (str test-base-url "/google") options)]
+    (is (= "http://www.google.com/" (get-in @response [:headers :location])))
+    (is (= 301 (:status @response))))
+  (let [options {:follow-redirects false}
+        response (http/get (str test-base-url "/bing") options)]
+    (is (= "http://www.bing.com/" (get-in @response [:headers :location])))
+    (is (= 301 (:status @response)))))
 
 (deftest test-query-get
   (let [options {:follow-redirects false}
