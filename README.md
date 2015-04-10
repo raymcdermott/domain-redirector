@@ -90,8 +90,7 @@ This feature is *NOT* provided by this application.
 
 If you wish to use an external backing store you will need to install locally or have services that provide MongoDB and REDIS.
 
-**You must set the environment variable PREFER_NETWORK_BACKING_STORE. You don't need to set it any particular value, it's mere presence in the environment will trigger checks for the other settings.**
-
+**Remember: You must set the environment variable PREFER_NETWORK_BACKING_STORE to true**
 
 The application will attach to these services using the following variables / defaults
  
@@ -158,8 +157,8 @@ Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
 
-###### Example 3: Domain + path redirection (also with multiple source domains)
-
+###### Example 3: Domain + path redirection
+ 
 ```JavaScript
 {
     "source" : {
@@ -182,12 +181,12 @@ Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
 
-###### Example 3: Domain + path redirection (also with multiple source domains)
+###### Example 3: Domain + path redirection with multiple source domains
 
 ```JavaScript
 {
     "source" : {
-        "domain" : [ "localhost" ],
+        "domain" : [ "localhost", "my-host", "other-host" ],
         "path" : "/new-site"
     },
     "target" : {
@@ -198,10 +197,10 @@ Server: Jetty(7.6.13.v20130916)
 ```
 
 ```
-$ curl -I http://localhost:5000/prius
+$ curl -I http://localhost:5000/new-site
 HTTP/1.1 301 Moved Permanently
 Date: Mon, 16 Mar 2015 15:55:13 GMT
-Location: http://www.toyota-europe.com/new-cars/prius
+Location: http://www.my-new-site.com/new-path
 Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
