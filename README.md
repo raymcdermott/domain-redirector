@@ -251,31 +251,31 @@ I will accept pull requests for the core logic and especially for any new tests.
 
 ## FAQ
 
-### Do you support query parameter forwarding
+### Does it support query parameter forwarding
 
 Yes. Any query parameters are passed along unaltered. Specifically, no attempt is made to decode or encode query parameters.
 
-### Do you non-exact path matching (for example with regexes?)
+### Does it support non-exact path matching (for example with regexes?)
 
 No, it only supports the simplest path matching where the path URL starts with the path given in the JSON file.
 
-### Do you support path transformations (for example with regexes?)
+### Does it support path transformations (for example with regexes?)
 
-Not yet. I would like to do this using core.logic rather than regex
+Not yet.
 
 ### Is it possible to use this application as a reverse proxy?
 
-No. That's another use case.
+No. That's another use case entirely.
 
 ### Is it possible to use this application as a URL shortener?
 
-No. That's also another use case.
+No. That's also another use case, although this could act as a part of that service.
 
 ### TODO List
 
 - support forwarding attributes as headers (for example authentication tokens)
 - Support checking of forwarded links (core.async)
-- Support powerful regular expression style logic for route matching (core.match / core.logic)
+- Support powerful regular expression style logic for route matching (clout / instaparse)
 
 
 ## License

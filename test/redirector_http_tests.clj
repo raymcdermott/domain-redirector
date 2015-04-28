@@ -6,6 +6,7 @@
 
 (def test-port 1234)
 (def test-base-url (str "http://localhost:" test-port))
+(def test-options {:follow-redirects false})
 
 (use-fixtures
   :once
@@ -17,29 +18,24 @@
           (.stop server))))))
 
 (deftest test-get
-  (let [options {:follow-redirects false}
-        response (http/get test-base-url options)]
+  (let [response (http/get test-base-url test-options)]
     (is (= "http://www.google.com/" (get-in @response [:headers :location])))
     (is (= 301 (:status @response)))))
 
 (deftest test-path-get
-  (let [options {:follow-redirects false}
-        response (http/get (str test-base-url "/google") options)]
+  (let [response (http/get (str test-base-url "/google") test-options)]
     (is (= "http://www.google.com/" (get-in @response [:headers :location])))
     (is (= 301 (:status @response))))
-  (let [options {:follow-redirects false}
-        response (http/get (str test-base-url "/bing") options)]
+  (let [response (http/get (str test-base-url "/bing") test-options)]
     (is (= "http://www.bing.com/" (get-in @response [:headers :location])))
     (is (= 301 (:status @response)))))
 
 (deftest test-query-get
-  (let [options {:follow-redirects false}
-        response (http/get (str test-base-url "/google?q=1") options)]
+  (let [response (http/get (str test-base-url "/google?q=1") test-options)]
     (is (= "http://www.google.com/?q=1" (get-in @response [:headers :location])))
     (is (= 301 (:status @response)))))
 
 (deftest test-headers-get
-  (let [options {:follow-redirects false}
-        response (http/get (str test-base-url "/secure") options)]
+  (let [response (http/get (str test-base-url "/secure") test-options)]
     (is (= "https://www.google.com/" (get-in @response [:headers :location])))
     (is (= 301 (:status @response)))))
