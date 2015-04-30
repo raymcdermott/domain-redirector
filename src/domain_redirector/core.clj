@@ -10,7 +10,13 @@
             [domain-redirector.mongo-helper :as mongo]
             [environ.core :refer [env]]))
 
-(def default-unspecified-port -1)
+(def defaults {:redirect-status-code 301
+               :ttl                  60000
+               :port                 5000
+               :protocol-header-name "x-forwarded-proto"
+               :json-file            "domains.json"
+               :unspecified-port     -1
+               :location-header-name "Location"})
 
 (def storage-config
   (if (env :prefer-network-backing-store)
@@ -19,7 +25,7 @@
 
 ; Network infrastructure often terminates SSL before hitting the server so we need to
 ; know what the real protocol is (ie what is the protocol requested by the user)
-(def forwarded-protocol-header (or (env :protocol-header-name) "x-forwarded-proto")) ; default is the header provided by Heroku
+(def forwarded-protocol-header (or (env :protocol-header-name) (:protocol-header-name defaults)))
 
 ; using defrecord because: free constructor and documentation
 (defrecord url-record [scheme domain port path query])
@@ -38,8 +44,9 @@
     (->url-record scheme domain port path query)))
 
 (defn url-string-from-record [url-record]
-  (let [port (if (= default-unspecified-port (:port url-record)) "" (str ":" (:port url-record)))
-        url-str (str (:scheme url-record) "://"
+  (let [port (if (= (:unspecified-port defaults) (:port url-record)) "" (str ":" (:port url-record)))
+        url-str (str (:scheme url-record)
+                     "://"
                      (:domain url-record)
                      port
                      (:path url-record)
@@ -67,7 +74,7 @@
 (def domains (atom {}))
 
 (defn set-domains-in-memory!
-  ([] (let [filename (or (env :domain-json-file) "domains.json")]
+  ([] (let [filename (or (env :domain-json-file) (:json-file defaults))]
         (set-domains-in-memory! filename)))
   ([filename] (let [new-domains (load-json-file filename)]
                 (and new-domains (reset! domains new-domains)))))
@@ -82,7 +89,7 @@
   (let [result (filter #(matching-domain
                          (:domain url-record) (get-in % [:source :domain])) @domains)
         path-results (and (:path url-record)
-                          (filter  #(matching-path (:path url-record) (get-in % [:source :path])) result))]
+                          (filter #(matching-path (:path url-record) (get-in % [:source :path])) result))]
     (or (first path-results) (first result))))
 
 (defn get-domain-from-backing-store [url-record]
@@ -92,13 +99,13 @@
 
 (def get-domain
   "Memoize fetching the domain from a network store"
-  (memo/ttl get-domain-from-backing-store :ttl/threshold (or (env :memoize-ttl) 60000)))
+  (memo/ttl get-domain-from-backing-store :ttl/threshold (or (env :memoize-ttl) (:ttl defaults))))
 
 (defn make-response-url [from-url-record mappings]
   "Produces a URL based on inputs and the target domain map"
   (let [record (->url-record (or (:scheme mappings) (:scheme from-url-record))
                              (:domain mappings)
-                             (or (:port mappings) default-unspecified-port)
+                             (or (:port mappings) (:unspecified-port defaults))
                              (or (:path mappings) "/")
                              (or (:query from-url-record) nil))]
     (url-string-from-record record)))
@@ -106,8 +113,8 @@
 (defn make-301-response [url-record target-map]
   "Create a ring response object with the 301 status code and Location header"
   (let [url (make-response-url url-record target-map)
-        response-301 (response/status (response/response "") 301)]
-    (response/header response-301 "Location" url)))
+        response-301 (response/status (response/response "") (:redirect-status-code defaults))]
+    (response/header response-301 (:location-header-name defaults) url)))
 
 (defn generate-response [request]
   (let [url-record (request-to-url-record request)]
@@ -122,7 +129,7 @@
 ; -------*** START WEB SERVER
 ;
 (defn -main [& [port]]
-  (let [port (Integer. (or port (env :port) 5000))]
+  (let [port (Integer. (or port (env :port) (:port defaults)))]
     (if (= (:backing-store storage-config) :memory)
       (set-domains-in-memory!))
 
