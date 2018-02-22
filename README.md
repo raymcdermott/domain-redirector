@@ -163,11 +163,11 @@ Server: Jetty(7.6.13.v20130916)
 {
     "source" : {
         "domain" : [ "localhost" ],
-        "path" : "/prius"
+        "path" : "/joker"
     },
     "target" : {
-        "domain" : "www.toyota-europe.com",
-        "path" : "/new-cars/prius"
+        "domain" : "www.random-poker-cards.com",
+        "path" : "/new-cards/joker"
     }
 }
 ```
@@ -176,7 +176,7 @@ Server: Jetty(7.6.13.v20130916)
 $ curl -I http://localhost:5000/prius
 HTTP/1.1 301 Moved Permanently
 Date: Mon, 16 Mar 2015 15:55:13 GMT
-Location: http://www.toyota-europe.com/new-cars/prius
+Location: http://www.random-poker-cards.com/new-cards/joker
 Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
@@ -211,7 +211,7 @@ Server: Jetty(7.6.13.v20130916)
 {
       "source": {
             "domain": [ "localhost" ],
-            "path": "/prius",
+            "path": "/joker",
             "attributeMap": [
                 {
                     "query-string": "token",
@@ -221,18 +221,18 @@ Server: Jetty(7.6.13.v20130916)
             ]
       },
       "target": {
-            "domain": "www.toyota-europe.com",
-            "path": "/new-cars/prius"
+            "domain": "www.random-poker-cards.com",
+            "path": "/new-cards/joker"
       }
 }
 ```
 
 ```
-$ curl -I http://localhost:5000/prius?token=abc-123
+$ curl -I http://localhost:5000/joker?token=abc-123
 HTTP/1.1 301 Moved Permanently
 Date: Mon, 16 Mar 2015 15:55:13 GMT
 Authorization: Bearer abc-123
-Location: http://www.toyota-europe.com/new-cars/prius
+Location: http://www.random-poker-cards.com/new-cards/joker
 Content-Length: 0
 Server: Jetty(7.6.13.v20130916)
 ```
